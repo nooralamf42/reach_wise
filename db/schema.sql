@@ -57,3 +57,29 @@ create table if not exists brand_enquiries (
   status text not null default 'new'
 );
 
+;
+
+-- Creator form v2: platforms and links replace the single Instagram handle.
+alter table creators add column if not exists platforms text[] not null default '{}';
+alter table creators add column if not exists instagram_url text;
+alter table creators alter column instagram_handle drop not null;
+drop index if exists creators_ig_key;
+
+-- Contact form messages, shown in the admin panel.
+create table if not exists contact_messages (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name text not null,
+  email text not null,
+  phone text,
+  message text not null,
+  status text not null default 'new',
+  email_status text not null default 'pending'
+);
+
+-- Small key/value settings editable from the admin panel (e.g. notify_emails).
+create table if not exists settings (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz not null default now()
+)

@@ -22,7 +22,7 @@ export function Footer() {
           <ul className="space-y-2 text-muted">
             <li><Link href="/privacy" className="hover:text-foreground">Privacy policy</Link></li>
             <li><Link href="/terms" className="hover:text-foreground">Terms</Link></li>
-            <li><a href={`mailto:${site.email}`} className="hover:text-foreground">{site.email}</a></li>
+            <li><Link href="/contact" className="hover:text-foreground">Contact us</Link></li>
           </ul>
         </div>
       </div>

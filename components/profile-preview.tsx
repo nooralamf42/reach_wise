@@ -2,7 +2,8 @@ import { compact } from "@/lib/stats";
 import { parseCount } from "@/lib/schemas";
 
 export type PreviewData = {
-  name?: string; city?: string; country?: string; birthYear?: string; niche?: string; handle?: string; followers?: string; languages?: string[];
+  name?: string; city?: string; country?: string; birthYear?: string; niche?: string;
+  followers?: string; languages?: string[]; platforms?: string[];
 };
 
 function Skel({ w }: { w: string }) {
@@ -12,11 +13,11 @@ function Skel({ w }: { w: string }) {
 /** "Your profile, as brands will see it": fills in as the creator answers. */
 export function ProfilePreview({ data }: { data: PreviewData }) {
   const name = data.name?.trim();
-  const handle = data.handle?.trim().replace(/^@/, "");
   const followers = data.followers ? parseCount(data.followers) : 0;
   const year = Number(data.birthYear);
   const age = /^\d{4}$/.test(data.birthYear ?? "") && year > 1900 ? new Date().getFullYear() - year : 0;
   const initials = (name || "?").split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+  const platforms = data.platforms ?? [];
 
   return (
     <div>
@@ -40,8 +41,11 @@ export function ProfilePreview({ data }: { data: PreviewData }) {
           ))}
         </div>
         <div className="mt-4 border-t border-border pt-3 text-sm">
-          {handle ? (
-            <p><span className="font-medium">@{handle}</span>{followers > 0 && <span className="text-muted"> · {compact(followers)} followers</span>}</p>
+          {platforms.length > 0 ? (
+            <p>
+              <span className="font-medium">{platforms.join(" · ")}</span>
+              {followers > 0 && <span className="text-muted"> · {compact(followers)} followers</span>}
+            </p>
           ) : (
             <Skel w="w-32" />
           )}

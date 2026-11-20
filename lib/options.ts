@@ -5,6 +5,8 @@ export const NICHES = [
 ] as const;
 
 export const PLATFORMS = ["Instagram", "YouTube", "Facebook", "X (Twitter)", "LinkedIn", "Snapchat", "ShareChat / Moj"] as const;
+/** Where creators post. Kept to three on purpose: quick to answer, easy to link. */
+export const POST_PLATFORMS = ["Instagram", "Facebook", "YouTube"] as const;
 export const CONTENT_TYPES = ["Reels / Shorts", "Stories", "Static posts", "Long-form video", "UGC (no posting)", "Product reviews", "Live streams"] as const;
 export const LANGUAGES = ["English", "Hindi", "Hinglish", "Bengali", "Marathi", "Gujarati", "Tamil", "Telugu", "Kannada", "Malayalam", "Punjabi", "Urdu", "Other"] as const;
 export const COUNTRIES = ["India", "Bangladesh", "Nepal", "Pakistan", "Sri Lanka", "United Arab Emirates", "United States", "United Kingdom", "Other"] as const;

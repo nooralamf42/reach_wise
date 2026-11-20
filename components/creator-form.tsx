@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2 } from "lucide-react";
-import { creatorSchema, type CreatorInput, type CreatorData } from "@/lib/schemas";
-import { COLLAB_PREFS, CONTENT_TYPES, COUNTRIES, GENDERS, LANGUAGES, NICHES } from "@/lib/options";
+import {
+  creatorSchema, isValidPlatformLink, LINK_FIELD, type CreatorInput, type CreatorData, type PostPlatform,
+} from "@/lib/schemas";
+import { COLLAB_PREFS, COUNTRIES, GENDERS, LANGUAGES, NICHES, POST_PLATFORMS } from "@/lib/options";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChipGroup, Field, Select, Textarea } from "@/components/form-ui";
-import { LinkListField } from "@/components/link-list-field";
 import { StepCard, StepProgress } from "@/components/steps";
 import { ProfilePreview } from "@/components/profile-preview";
 import { site } from "@/lib/site-config";
@@ -24,34 +25,119 @@ const STEPS: Key[][] = [
   ["country", "city"],
   ["birthYear"],
   ["gender"],
-  ["primaryNiche", "languages", "contentTypes"],
-  ["instagramHandle", "instagramFollowers"],
-  ["sampleLinks"],
+  ["primaryNiche", "languages"],
+  ["platforms"],
+  ["instagramUrl", "facebookUrl", "youtubeUrl", "followers"],
   ["collabPreference", "consent"],
 ];
+
+const ALREADY_JOINED = "You've already joined with this email or phone number. We'll be in touch if a brand fits you.";
+
+const LINK_COPY: Record<PostPlatform, { label: string; placeholder: string }> = {
+  Instagram: { label: "Instagram link or @handle", placeholder: "instagram.com/yourname or @yourname" },
+  Facebook: { label: "Facebook page or profile link", placeholder: "facebook.com/yourpage" },
+  YouTube: { label: "YouTube channel link", placeholder: "youtube.com/@yourchannel" },
+};
+
+/** Short burst of confetti from both bottom corners. Skipped for people who prefer less motion. */
+function useConfetti(active: boolean) {
+  useEffect(() => {
+    if (!active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let cancelled = false;
+    void import("canvas-confetti").then(({ default: confetti }) => {
+      if (cancelled) return;
+      const end = Date.now() + 1800;
+      const colors = ["#ff4d2e", "#171717", "#ffb199", "#2e8b57", "#f5c542"];
+      (function frame() {
+        if (cancelled) return;
+        confetti({ particleCount: 5, angle: 60, spread: 60, origin: { x: 0, y: 0.8 }, colors });
+        confetti({ particleCount: 5, angle: 120, spread: 60, origin: { x: 1, y: 0.8 }, colors });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [active]);
+}
 
 export function CreatorForm() {
   const [step, setStep] = useState(0);
   const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
   const [serverError, setServerError] = useState("");
+  const [checking, setChecking] = useState(false);
 
   const {
-    register, handleSubmit, control, trigger, setValue, formState: { errors },
+    register, handleSubmit, control, trigger, setValue, setError, getValues, formState: { errors },
   } = useForm<CreatorInput, unknown, CreatorData>({
     resolver: zodResolver(creatorSchema),
-    defaultValues: { country: "India", languages: [], otherCategories: [], contentTypes: [], sampleLinks: [] },
+    defaultValues: { country: "India", languages: [], otherCategories: [], platforms: [] },
   });
 
-  const [name, city, country, birthYear, gender, niche, handle, followers, languages] = useWatch({
+  const [name, city, country, birthYear, gender, niche, languages, platforms, followers] = useWatch({
     control,
-    name: ["fullName", "city", "country", "birthYear", "gender", "primaryNiche", "instagramHandle", "instagramFollowers", "languages"],
+    name: ["fullName", "city", "country", "birthYear", "gender", "primaryNiche", "languages", "platforms", "followers"],
   });
 
   const last = step === STEPS.length - 1;
+  useConfetti(status === "done");
 
   function goTo(n: number) {
     setStep(n);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  /** Step 2: stop people who already joined before they fill in the rest. */
+  async function alreadyJoined(): Promise<boolean> {
+    const { email, phone } = getValues();
+    setChecking(true);
+    try {
+      const res = await fetch("/api/creators/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, phone }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.exists) {
+        setError("email", { message: ALREADY_JOINED });
+        return true;
+      }
+    } catch {
+      // If the check fails we let them continue; the server checks again on submit.
+    } finally {
+      setChecking(false);
+    }
+    return false;
+  }
+
+  /** Step 8: at least one of the chosen platforms needs a valid link. */
+  function hasOneValidLink(): boolean {
+    const values = getValues();
+    const chosen = (values.platforms ?? []) as PostPlatform[];
+    let valid = 0;
+    let flagged = false; // a specific "that link looks wrong" message already shown
+    for (const p of chosen) {
+      const field = LINK_FIELD[p];
+      const raw = (values[field] ?? "").trim();
+      if (!raw) continue;
+      if (isValidPlatformLink(p, raw)) {
+        valid++;
+      } else {
+        flagged = true;
+        setError(field, { message: `Enter a valid ${p} link or handle` });
+      }
+    }
+    if (valid === 0 && !flagged && chosen.length > 0) {
+      setError(LINK_FIELD[chosen[0]], { message: chosen.length > 1 ? "Add at least one link" : `Add your ${chosen[0]} link` });
+    }
+    return valid > 0;
+  }
+
+  async function onContinue() {
+    if (!(await trigger(STEPS[step]))) return;
+    if (step === 1 && (await alreadyJoined())) return;
+    if (step === 7 && !hasOneValidLink()) return;
+    goTo(step + 1);
   }
 
   async function onSubmit(values: CreatorData) {
@@ -65,7 +151,12 @@ export function CreatorForm() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setServerError(data.error ?? "Something went wrong. Please try again.");
+        if (data.duplicate) {
+          setError("email", { message: ALREADY_JOINED });
+          goTo(1);
+        } else {
+          setServerError(data.error ?? "Something went wrong. Please try again.");
+        }
         setStatus("idle");
         return;
       }
@@ -87,7 +178,7 @@ export function CreatorForm() {
     return (
       <div className="mx-auto max-w-lg rounded-2xl border border-border bg-surface p-8 text-center">
         <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
-        <h2 className="mt-4 text-2xl font-semibold">You&apos;re in the pool!</h2>
+        <h2 className="mt-4 text-2xl font-semibold">You&apos;re in! 🎉</h2>
         <p className="mx-auto mt-2 max-w-md text-muted">
           We review every profile. If a brand brief fits your niche and audience, we&apos;ll message you on WhatsApp or email.
         </p>
@@ -99,11 +190,12 @@ export function CreatorForm() {
   }
 
   const e = (k: Key) => errors[k]?.message as string | undefined;
+  const chosen = POST_PLATFORMS.filter((p) => (platforms ?? []).includes(p));
 
   return (
     <div className="grid gap-6 lg:grid-cols-[18rem_1fr] lg:items-start">
       <div className="hidden lg:block">
-        <ProfilePreview data={{ name, city, country, birthYear, niche, handle, followers, languages }} />
+        <ProfilePreview data={{ name, city, country, birthYear, niche, languages, platforms, followers }} />
       </div>
 
       <form
@@ -112,7 +204,7 @@ export function CreatorForm() {
         onSubmit={(ev) => {
           ev.preventDefault();
           if (last) void handleSubmit(onSubmit, onInvalid)(ev);
-          else void trigger(STEPS[step]).then((ok) => ok && goTo(step + 1));
+          else void onContinue();
         }}
       >
         {/* Honeypot: hidden from people, bots fill it */}
@@ -127,7 +219,7 @@ export function CreatorForm() {
         )}
 
         {step === 1 && (
-          <StepCard title="How can we reach you?" hint="We only use this to send you brand collaborations.">
+          <StepCard title="How can we reach you?" hint="We only use this to send you brand collaborations." sending={checking}>
             <Field label="Email" required error={e("email")}><Input type="email" placeholder="you@email.com" autoFocus {...register("email")} /></Field>
             <Field label="Phone / WhatsApp" required error={e("phone")}><Input type="tel" placeholder="98XXXXXXXX" {...register("phone")} /></Field>
           </StepCard>
@@ -177,44 +269,33 @@ export function CreatorForm() {
           <StepCard title="What do you create?" hint="Brands search by niche, so be specific.">
             <Field label="Main niche" required error={e("primaryNiche")}><Select options={NICHES} {...register("primaryNiche")} /></Field>
             <Field label="Languages" required error={e("languages")}><ChipGroup control={control} name="languages" options={LANGUAGES} /></Field>
-            <Field label="Content you make" required error={e("contentTypes")}><ChipGroup control={control} name="contentTypes" options={CONTENT_TYPES} /></Field>
-            <details className="rounded-xl border border-border bg-background p-4">
-              <summary className="cursor-pointer text-sm font-semibold">Other categories you cover (optional)</summary>
-              <div className="mt-3"><ChipGroup control={control} name="otherCategories" options={NICHES} max={5} /></div>
-            </details>
           </StepCard>
         )}
 
         {step === 6 && (
-          <StepCard title="Where do you post?" hint="Add your Instagram so brands can see your work.">
-            <Field label="Instagram handle" required error={e("instagramHandle")}><Input placeholder="@yourhandle" autoFocus {...register("instagramHandle")} /></Field>
-            <Field label="Instagram followers" required error={e("instagramFollowers")} hint="e.g. 12500 or 12.5K"><Input placeholder="12.5K" {...register("instagramFollowers")} /></Field>
-            <details className="rounded-xl border border-border bg-background p-4">
-              <summary className="cursor-pointer text-sm font-semibold">Add more stats and platforms (optional)</summary>
-              <div className="mt-4 space-y-4">
-                <Field label="Average reel views" error={e("avgReelViews")}><Input placeholder="e.g. 8K" {...register("avgReelViews")} /></Field>
-                <Field label="Engagement rate (%)" error={e("engagementRate")}><Input placeholder="e.g. 4.2" {...register("engagementRate")} /></Field>
-                <Field label="YouTube channel link" error={e("youtubeUrl")}><Input placeholder="youtube.com/@channel" {...register("youtubeUrl")} /></Field>
-                <Field label="YouTube subscribers" error={e("youtubeSubscribers")}><Input placeholder="e.g. 3K" {...register("youtubeSubscribers")} /></Field>
-                <Field label="Facebook" error={e("facebookUrl")}><Input placeholder="facebook.com/…" {...register("facebookUrl")} /></Field>
-                <Field label="X (Twitter) handle" error={e("xHandle")}><Input placeholder="@handle" {...register("xHandle")} /></Field>
-                <Field label="LinkedIn" error={e("linkedinUrl")}><Input placeholder="linkedin.com/in/…" {...register("linkedinUrl")} /></Field>
-                <Field label="Snapchat handle" error={e("snapchatHandle")}><Input placeholder="@handle" {...register("snapchatHandle")} /></Field>
-                <Field label="Other (ShareChat, Moj, blog…)" error={e("otherPlatform")}><Input placeholder="Name and link" {...register("otherPlatform")} /></Field>
-              </div>
-            </details>
+          <StepCard title="Where do you post?" hint="Pick every platform you use. You can pick more than one.">
+            <Field label="Platforms" required error={e("platforms")}><ChipGroup control={control} name="platforms" options={POST_PLATFORMS} /></Field>
           </StepCard>
         )}
 
         {step === 7 && (
-          <StepCard title="Share a video you made" hint="Paste 2 or more links to videos you made, from Instagram, YouTube or TikTok.">
-            <LinkListField control={control} name="sampleLinks" placeholder="https://instagram.com/reel/…" />
-            {e("sampleLinks") && <p className="text-xs font-medium text-red-600">{e("sampleLinks")}</p>}
+          <StepCard
+            title={chosen.length > 1 ? "Add your links" : "Add your link"}
+            hint={chosen.length > 1 ? "Add at least one. More links help brands find you." : "So brands can see your work."}
+          >
+            {chosen.map((p, i) => (
+              <Field key={p} label={LINK_COPY[p].label} required={chosen.length === 1} error={e(LINK_FIELD[p])}>
+                <Input placeholder={LINK_COPY[p].placeholder} autoFocus={i === 0} {...register(LINK_FIELD[p])} />
+              </Field>
+            ))}
+            <Field label="Total followers (optional)" error={e("followers")} hint="e.g. 12500 or 12.5K">
+              <Input placeholder="12.5K" {...register("followers")} />
+            </Field>
           </StepCard>
         )}
 
         {step === 8 && (
-          <StepCard title="Last bit" hint="Rates and past work help us match you faster." last sending={status === "sending"} submitLabel="Submit my profile">
+          <StepCard title="Last bit" hint="Almost there." last sending={status === "sending"} submitLabel="Submit my profile">
             <Field label="Work you accept" required error={e("collabPreference")}><Select options={COLLAB_PREFS} {...register("collabPreference")} /></Field>
             <details className="rounded-xl border border-border bg-background p-4">
               <summary className="cursor-pointer text-sm font-semibold">Rates and past work (optional)</summary>
