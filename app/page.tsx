@@ -48,11 +48,11 @@ export default async function Home() {
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-muted">{site.description}</p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/brands" className="inline-flex h-14 items-center gap-2 rounded-xl bg-accent px-8 text-base font-semibold text-white hover:bg-accent-dark">
-            Hire creators <ArrowRight className="h-4 w-4" />
+          <Link href="/start" className="inline-flex h-14 items-center gap-2 rounded-xl bg-accent px-8 text-base font-semibold text-white hover:bg-accent-dark">
+            Get started <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link href="/join" className="inline-flex h-14 items-center rounded-xl border border-border bg-surface px-8 text-base font-semibold hover:border-foreground/40">
-            Join as a creator
+          <Link href="/#how" className="inline-flex h-14 items-center rounded-xl border border-border bg-surface px-8 text-base font-semibold hover:border-foreground/40">
+            See how it works
           </Link>
         </div>
       </section>
@@ -126,8 +126,7 @@ export default async function Home() {
           <h2 className="text-3xl font-bold sm:text-4xl">Ready to start?</h2>
           <p className="mx-auto mt-3 max-w-lg text-background/70">Whether you run a brand or create content, it takes a few minutes.</p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <Link href="/brands" className="inline-flex h-12 items-center rounded-xl bg-accent px-7 text-sm font-semibold text-white hover:bg-accent-dark">Hire creators</Link>
-            <Link href="/join" className="inline-flex h-12 items-center rounded-xl bg-background px-7 text-sm font-semibold text-foreground hover:bg-accent-ink">Join as creator</Link>
+            <Link href="/start" className="inline-flex h-12 items-center rounded-xl bg-accent px-7 text-sm font-semibold text-white hover:bg-accent-dark">Get started</Link>
           </div>
         </div>
       </section>

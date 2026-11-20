@@ -16,11 +16,8 @@ export function Navbar() {
           <Link href="/contact" className="hover:text-foreground">Contact</Link>
         </nav>
         <div className="flex items-center gap-2">
-          <Link href="/join" className="hidden h-9 items-center rounded-xl border border-border bg-surface px-4 text-xs font-semibold hover:border-foreground/40 sm:inline-flex">
-            Join as creator
-          </Link>
-          <Link href="/brands" className="inline-flex h-9 items-center rounded-xl bg-foreground px-4 text-xs font-semibold text-background hover:bg-accent">
-            Hire creators
+          <Link href="/start" className="inline-flex h-9 items-center rounded-xl bg-foreground px-4 text-xs font-semibold text-background hover:bg-accent">
+            Get started
           </Link>
         </div>
       </div>
