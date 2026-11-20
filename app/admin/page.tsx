@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { isDbConfigured, listBrands, listCreators, type Row } from "@/lib/db";
 import { whatsappChatUrl } from "@/lib/phone";
 import { NICHES } from "@/lib/options";
 import { compact } from "@/lib/stats";
@@ -14,25 +14,17 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   const tab = sp.tab === "brands" ? "brands" : "creators";
 
-  if (!isSupabaseConfigured()) {
-    return <div className="mx-auto max-w-3xl px-5 py-16">Supabase isn&apos;t configured. Add the keys to .env.local.</div>;
+  if (!isDbConfigured()) {
+    return <div className="mx-auto max-w-3xl px-5 py-16">Database isn&apos;t configured. Set DATABASE_URL in .env.local.</div>;
   }
-  const db = getSupabaseClient();
 
-  let creators: Record<string, any>[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
-  let brands: Record<string, any>[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let creators: Row[] = [];
+  let brands: Row[] = [];
 
   if (tab === "creators") {
-    let query = db.from("creators").select("*").order("created_at", { ascending: false }).limit(500);
-    if (sp.niche) query = query.eq("primary_niche", sp.niche);
-    if (sp.min) query = query.gte("instagram_followers", Number(sp.min) || 0);
-    if (sp.q) {
-      const q = sp.q.replace(/[%,()]/g, "");
-      query = query.or(`full_name.ilike.%${q}%,city.ilike.%${q}%,instagram_handle.ilike.%${q}%,email.ilike.%${q}%`);
-    }
-    creators = (await query).data ?? [];
+    creators = await listCreators({ niche: sp.niche || undefined, min: Number(sp.min) || undefined, q: sp.q || undefined });
   } else {
-    brands = (await db.from("brand_enquiries").select("*").order("created_at", { ascending: false }).limit(500)).data ?? [];
+    brands = await listBrands();
   }
 
   const tabLink = (t: string, label: string) => (

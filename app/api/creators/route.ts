@@ -1,6 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { creatorSchema, parseCount } from "@/lib/schemas";
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { insertRow, isDbConfigured } from "@/lib/db";
 import { phoneDedupeKey, toE164 } from "@/lib/phone";
 import { clientIp, rateLimited } from "@/lib/rate-limit";
 import { notifyNewCreator } from "@/lib/notify";
@@ -20,18 +20,17 @@ export async function POST(request: Request) {
   // Bots fill the hidden field. Pretend success so they don't retry.
   if (d.website) return NextResponse.json({ success: true });
 
-  if (!isSupabaseConfigured()) {
+  if (!isDbConfigured()) {
     return NextResponse.json({ error: "Sign-ups are temporarily unavailable. Please try again later." }, { status: 503 });
   }
 
-  const phoneKey = phoneDedupeKey(d.phone);
-  const { error } = await getSupabaseClient()
-    .from("creators")
-    .insert({
+  let result: "ok" | "duplicate";
+  try {
+    result = await insertRow("creators", {
       full_name: d.fullName,
       email: d.email,
       phone: toE164(d.phone),
-      phone_key: phoneKey,
+      phone_key: phoneDedupeKey(d.phone),
       city: d.city,
       state: d.state,
       age_range: d.ageRange,
@@ -57,16 +56,16 @@ export async function POST(request: Request) {
       portfolio_url: d.portfolioUrl,
       about: d.about,
     });
-
-  if (error) {
-    if (error.code === "23505") {
-      return NextResponse.json(
-        { error: "A profile with this email, phone number or Instagram handle already exists. We'll be in touch." },
-        { status: 409 }
-      );
-    }
-    console.error("[creators] insert failed", error);
+  } catch (e) {
+    console.error("[creators] insert failed", e);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+  }
+
+  if (result === "duplicate") {
+    return NextResponse.json(
+      { error: "A profile with this email, phone number or Instagram handle already exists. We'll be in touch." },
+      { status: 409 }
+    );
   }
 
   after(() =>

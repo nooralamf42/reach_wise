@@ -1,4 +1,4 @@
--- Run this once in the Supabase SQL editor.
+-- Run once with: npm run db:setup
 create table if not exists creators (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -54,6 +54,3 @@ create table if not exists brand_enquiries (
   status text not null default 'new'
 );
 
--- Only the server (service role) touches these tables.
-alter table creators enable row level security;
-alter table brand_enquiries enable row level security;

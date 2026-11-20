@@ -1,6 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { brandSchema } from "@/lib/schemas";
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { insertRow, isDbConfigured } from "@/lib/db";
 import { toE164 } from "@/lib/phone";
 import { clientIp, rateLimited } from "@/lib/rate-limit";
 import { notifyNewBrand } from "@/lib/notify";
@@ -18,13 +18,12 @@ export async function POST(request: Request) {
   const d = parsed.data;
   if (d.website) return NextResponse.json({ success: true });
 
-  if (!isSupabaseConfigured()) {
+  if (!isDbConfigured()) {
     return NextResponse.json({ error: "Enquiries are temporarily unavailable. Please email us instead." }, { status: 503 });
   }
 
-  const { error } = await getSupabaseClient()
-    .from("brand_enquiries")
-    .insert({
+  try {
+    await insertRow("brand_enquiries", {
       company_name: d.companyName,
       contact_name: d.contactName,
       role: d.role,
@@ -38,9 +37,8 @@ export async function POST(request: Request) {
       timeline: d.timeline,
       notes: d.notes,
     });
-
-  if (error) {
-    console.error("[brands] insert failed", error);
+  } catch (e) {
+    console.error("[brands] insert failed", e);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 
