@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAdminState } from "@/lib/admin-access";
 import { isDbConfigured, listBrands, listCreators, type Row } from "@/lib/db";
 import { whatsappChatUrl } from "@/lib/phone";
 import { NICHES } from "@/lib/options";
@@ -13,6 +15,22 @@ type SP = { niche?: string; q?: string; min?: string; tab?: string };
 export default async function AdminPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const tab = sp.tab === "brands" ? "brands" : "creators";
+
+  const access = await getAdminState();
+  if (access.status === "signed-out") redirect("/auth/sign-in");
+  if (access.status === "forbidden") {
+    return (
+      <div className="mx-auto max-w-md px-5 py-24">
+        <h1 className="text-2xl font-bold">No access</h1>
+        <p className="mt-2 text-sm text-muted">
+          {access.reason === "unverified"
+            ? `Verify the email for ${access.email} first, then reload this page.`
+            : `${access.email} isn't on the admin list.`}
+        </p>
+        <div className="mt-5"><LogoutButton /></div>
+      </div>
+    );
+  }
 
   if (!isDbConfigured()) {
     return <div className="mx-auto max-w-3xl px-5 py-16">Database isn&apos;t configured. Set DATABASE_URL in .env.local.</div>;
@@ -37,7 +55,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     <div className="mx-auto max-w-7xl px-5 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold">Admin</h1>
-        <LogoutButton />
+        <LogoutButton email={access.email} />
       </div>
       <div className="mt-5 flex gap-2">{tabLink("creators", "Creators")}{tabLink("brands", "Brand enquiries")}</div>
 

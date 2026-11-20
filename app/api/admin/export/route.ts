@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_SESSION_COOKIE, isSessionTokenValid } from "@/lib/admin-auth";
+import { getAdminState } from "@/lib/admin-access";
 import { isDbConfigured, listCreators } from "@/lib/db";
 
 // Spreadsheet apps run cell text starting with = + - @ as formulas; neutralise.
@@ -11,7 +11,8 @@ function cell(v: unknown) {
 
 export async function GET(request: NextRequest) {
   // /api is outside the proxy matcher, so check the session here.
-  if (!isSessionTokenValid(request.cookies.get(ADMIN_SESSION_COOKIE)?.value)) {
+  const access = await getAdminState();
+  if (access.status !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!isDbConfigured()) return NextResponse.json({ error: "Not configured" }, { status: 503 });

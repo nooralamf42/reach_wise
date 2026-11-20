@@ -1,18 +1,10 @@
-"use client";
+import { signOutAction } from "@/app/auth/actions";
 
-import { useRouter } from "next/navigation";
-
-export function LogoutButton() {
-  const router = useRouter();
+export function LogoutButton({ email }: { email?: string }) {
   return (
-    <button
-      className="text-sm font-medium text-muted hover:text-foreground"
-      onClick={async () => {
-        await fetch("/api/admin/logout", { method: "POST" });
-        router.replace("/admin/login");
-      }}
-    >
-      Log out
-    </button>
+    <form action={signOutAction} className="flex items-center gap-3">
+      {email && <span className="text-sm text-muted">{email}</span>}
+      <button className="text-sm font-medium text-muted hover:text-foreground">Log out</button>
+    </form>
   );
 }
