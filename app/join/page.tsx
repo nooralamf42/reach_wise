@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { CreatorForm } from "@/components/creator-form";
-import { creatorSteps, site } from "@/lib/site-config";
+import { site } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Join as a creator",
@@ -9,27 +9,14 @@ export const metadata: Metadata = {
 
 export default function JoinPage() {
   return (
-    <div className="mx-auto max-w-3xl px-5 py-14">
-      <h1 className="text-4xl font-bold sm:text-5xl">Join our creator network</h1>
-      <p className="mt-4 text-lg text-muted">
-        Free to join. Fill the form once and we&apos;ll match you with brand collaborations that fit your niche and audience.
-      </p>
-
-      <ol className="mt-8 grid gap-3 sm:grid-cols-2">
-        {creatorSteps.map((s, i) => (
-          <li key={s.title} className="rounded-xl border border-border bg-surface p-4 text-sm">
-            <span className="font-semibold">{i + 1}. {s.title}</span>
-            <p className="mt-1 text-muted">{s.text}</p>
-          </li>
-        ))}
-      </ol>
-      <p className="mt-4 text-sm text-muted">
-        We can&apos;t promise a collaboration for every profile, and we will never ask you for money to join.
-      </p>
-
-      <div className="mt-10">
-        <CreatorForm />
+    <div className="mx-auto max-w-4xl px-5 py-12">
+      <div className="mx-auto mb-8 max-w-lg text-center lg:max-w-none lg:text-left">
+        <h1 className="text-3xl font-bold sm:text-4xl">Get paid to create for brands</h1>
+        <p className="mt-2 text-muted">
+          Free to join, takes about 3 minutes. We match you with brand briefs that fit your niche, then message you on WhatsApp. We never ask creators for money.
+        </p>
       </div>
+      <CreatorForm />
     </div>
   );
 }
