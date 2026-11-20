@@ -2,7 +2,7 @@ import { compact } from "@/lib/stats";
 import { parseCount } from "@/lib/schemas";
 
 export type PreviewData = {
-  name?: string; city?: string; niche?: string; handle?: string; followers?: string; languages?: string[];
+  name?: string; city?: string; country?: string; birthYear?: string; niche?: string; handle?: string; followers?: string; languages?: string[];
 };
 
 function Skel({ w }: { w: string }) {
@@ -14,6 +14,8 @@ export function ProfilePreview({ data }: { data: PreviewData }) {
   const name = data.name?.trim();
   const handle = data.handle?.trim().replace(/^@/, "");
   const followers = data.followers ? parseCount(data.followers) : 0;
+  const year = Number(data.birthYear);
+  const age = /^\d{4}$/.test(data.birthYear ?? "") && year > 1900 ? new Date().getFullYear() - year : 0;
   const initials = (name || "?").split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
   return (
@@ -26,7 +28,9 @@ export function ProfilePreview({ data }: { data: PreviewData }) {
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-accent font-semibold text-white">{initials}</span>
           <div className="min-w-0">
             <p className="truncate font-semibold">{name || <Skel w="w-24" />}</p>
-            <p className="truncate text-xs text-muted">{data.city?.trim() || <Skel w="w-16" />}</p>
+            <p className="truncate text-xs text-muted">
+              {data.city?.trim() ? `${data.city.trim()}${data.country ? `, ${data.country}` : ""}${age ? ` · ${age}` : ""}` : <Skel w="w-16" />}
+            </p>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2 text-xs">

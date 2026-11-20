@@ -32,17 +32,23 @@ export function StepProgress({ total, current, onBack }: { total: number; curren
 
 /** One short question per screen: title, one-line subtitle, a few fields, one button. */
 export function StepCard({
-  title, hint, children, sending, last, submitLabel,
-}: { title: string; hint?: string; children: React.ReactNode; sending?: boolean; last?: boolean; submitLabel?: string }) {
+  title, hint, children, sending, last, submitLabel, hideButton,
+}: {
+  title: string; hint?: string; children: React.ReactNode; sending?: boolean; last?: boolean; submitLabel?: string;
+  /** For tap-to-advance screens that have no Continue button. */
+  hideButton?: boolean;
+}) {
   return (
     <div>
       <h2 className="font-display text-2xl font-semibold">{title}</h2>
       {hint && <p className="mt-1 text-sm text-muted">{hint}</p>}
       <div className="mt-6 space-y-4">{children}</div>
-      <Button type="submit" variant={last ? "accent" : "primary"} size="lg" className="mt-7 w-full" disabled={sending}>
-        {sending && <Loader2 className="h-4 w-4 animate-spin" />}
-        {last ? (sending ? "Submitting…" : (submitLabel ?? "Submit")) : "Continue"}
-      </Button>
+      {!hideButton && (
+        <Button type="submit" variant={last ? "accent" : "primary"} size="lg" className="mt-7 w-full" disabled={sending}>
+          {sending && <Loader2 className="h-4 w-4 animate-spin" />}
+          {last ? (sending ? "Submitting…" : (submitLabel ?? "Submit")) : "Continue"}
+        </Button>
+      )}
     </div>
   );
 }

@@ -1,7 +1,17 @@
 import { z } from "zod";
 import {
-  NICHES, CONTENT_TYPES, LANGUAGES, AGE_RANGES, COLLAB_PREFS, BUDGETS, GOALS, TIMELINES, PLATFORMS,
+  NICHES, CONTENT_TYPES, LANGUAGES, COUNTRIES, GENDERS, COLLAB_PREFS, BUDGETS, GOALS, TIMELINES, PLATFORMS,
 } from "@/lib/options";
+
+/** Birth year -> the age bucket stored for filtering. */
+export function ageRangeFromBirthYear(year: string): string {
+  const age = new Date().getFullYear() - Number(year);
+  if (age < 18) return "Under 18";
+  if (age <= 24) return "18-24";
+  if (age <= 34) return "25-34";
+  if (age <= 44) return "35-44";
+  return "45+";
+}
 
 const phone = z
   .string()
@@ -33,10 +43,25 @@ export const creatorSchema = z.object({
   fullName: z.string().trim().min(2, "Enter your full name").max(100),
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
   phone,
+  country: z.enum(COUNTRIES, { message: "Select your country" }),
   city: z.string().trim().min(2, "Enter your city").max(80),
   state: optionalText(80),
-  ageRange: z.enum(AGE_RANGES, { message: "Select your age range" }),
-  gender: optionalText(30),
+  birthYear: z
+    .string()
+    .trim()
+    .regex(/^\d{4}$/, "Enter a 4-digit year, e.g. 1999")
+    .refine((v) => Number(v) >= 1940 && Number(v) <= new Date().getFullYear() - 13, "Enter a valid birth year (13+)"),
+  gender: z.enum(GENDERS, { message: "Select one" }),
+  sampleLinks: z
+    .array(
+      z
+        .string()
+        .trim()
+        .max(300)
+        .regex(/^https?:\/\/[^\s.]+\.[^\s]{2,}$/i, "Links must start with https://")
+    )
+    .min(2, "Add at least 2 links to videos you made")
+    .max(5, "Up to 5 links"),
   languages: z.array(z.enum(LANGUAGES)).min(1, "Select at least one language"),
   primaryNiche: z.enum(NICHES, { message: "Select your main niche" }),
   otherCategories: z.array(z.enum(NICHES)).max(5, "Pick up to 5").default([]),

@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { creatorSchema, parseCount } from "@/lib/schemas";
+import { ageRangeFromBirthYear, creatorSchema, parseCount } from "@/lib/schemas";
 import { insertRow, isDbConfigured } from "@/lib/db";
 import { phoneDedupeKey, toE164 } from "@/lib/phone";
 import { clientIp, rateLimited } from "@/lib/rate-limit";
@@ -31,9 +31,12 @@ export async function POST(request: Request) {
       email: d.email,
       phone: toE164(d.phone),
       phone_key: phoneDedupeKey(d.phone),
+      country: d.country,
       city: d.city,
       state: d.state,
-      age_range: d.ageRange,
+      birth_year: Number(d.birthYear),
+      age_range: ageRangeFromBirthYear(d.birthYear),
+      sample_links: d.sampleLinks,
       gender: d.gender,
       languages: d.languages,
       primary_niche: d.primaryNiche,
